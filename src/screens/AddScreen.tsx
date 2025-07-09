@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, firestore } from '../services/firebase';
 import { Picker } from '@react-native-picker/picker';
+import CategoryPickerModal from '../components/CategoryPickerModal';
 
 const categories = [
   { label: 'Food', value: 'Food' },
@@ -28,6 +29,7 @@ export default function AddScreen () {
     note: '',
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
@@ -36,9 +38,15 @@ export default function AddScreen () {
   };
 
   const handleSubmit = async () => {
-    if (!formData.price || isNaN(Number(formData.price.replace(/,/g, '')))) {
-      return Alert.alert('Please enter a valid amount.');
+    // Validate price
+    if (!formData.price || isNaN(Number(formData.price))) {
+      return Alert.alert('Invalid price value. Please enter a valid number.');
     }
+  
+    // Sanitize price
+    const sanitizedPrice = parseFloat(formData.price.toString().replace(/,/g, ''));
+  
+    // Validate other fields
     if (!formData.category) {
       return Alert.alert('Please enter a category.');
     }
@@ -48,11 +56,12 @@ export default function AddScreen () {
     if (!auth.currentUser) {
       return Alert.alert('User not authenticated.');
     }
+  
     setLoading(true);
     try {
       await addDoc(collection(firestore, 'transactions'), {
         type: formData.type,
-        price: formData.price,
+        price: sanitizedPrice,
         category: formData.category,
         date: formData.date,
         title: formData.title,
@@ -64,6 +73,7 @@ export default function AddScreen () {
       Alert.alert('Success', 'Transaction added!');
       navigation.goBack();
     } catch (err) {
+      console.error('Error adding transaction:', err);
       setLoading(false);
       Alert.alert('Error', 'Failed to add transaction.');
     }
@@ -157,29 +167,30 @@ export default function AddScreen () {
           <Text style={styles.label}>Amount</Text>
           <TextInput
             style={styles.input}
-            placeholder="0"
-            keyboardType="numeric"
+            placeholder="Enter price"
             value={formData.price}
-            onChangeText={(text) => {
-              const formatted = formatAmount(text);
-              handleChange('price', formatted);
-            }}
+            onChangeText={(text) => handleChange('price', text)}
+            keyboardType="numeric"
           />
 
           {/* Category */}
           <Text style={styles.label}>Category</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={formData.category}
-              onValueChange={(itemValue) => handleChange('category', itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select category..." value="" />
-              {categories.map((cat) => (
-                <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
-              ))}
-            </Picker>
-          </View>
+          <TouchableOpacity
+            style={[styles.input, { flexDirection: 'row', alignItems: 'center' }]}
+            onPress={() => setShowCategoryPicker(true)}
+          >
+            <Text style={{ color: formData.category ? '#000' : '#999', flex: 1 }}>
+              {formData.category || 'Choose a category'}
+            </Text>
+            <MaterialIcons name="arrow-drop-down" size={24} color="#999" />
+          </TouchableOpacity>
+
+          <CategoryPickerModal
+            visible={showCategoryPicker}
+            onClose={() => setShowCategoryPicker(false)}
+            onSelect={(category) => handleChange('category', category)}
+          />
+
 
           {/* Title */}
           <Text style={styles.label}>Title</Text>
@@ -218,7 +229,7 @@ export default function AddScreen () {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#00D09E',
   },
   subContainer: {
@@ -306,7 +317,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   picker: {
-    height: 48,
+    height: 50,
     width: '100%',
   },
 });

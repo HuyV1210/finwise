@@ -1,14 +1,25 @@
-import { StyleSheet, Text, View, Alert } from 'react-native'
+import { StyleSheet, Text, View, Alert, TouchableOpacity } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import Header from '../components/Header'
 import { auth, firestore } from '../services/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 
-const HomeScreen = () => {
+export default function Home () {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
+  const [selectedPeriod, setSelectedPeriod] = useState('daily');
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const navigation = useNavigation();
+
+  const handlePeriodPress = (period: string) => {
+    setSelectedPeriod(period);
+    console.log(`Selected period: ${period}`);
+    // Add logic to filter transactions based on the selected period
+  };
 
   const handleNotificationPress = () => {
     Alert.alert('Notifications', 'No new notifications');
@@ -19,37 +30,41 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
-    const fetchTotals = async () => {
-      try {
-        const user = auth.currentUser;
-        if(!user) return;
-
-        const q = query(
-          collection(firestore, 'transactions'),
-          where('userId', '==', user.uid)
-        );
-        const snapshot = await getDocs(q);
-
-        let income = 0;
-        let expense = 0;
-
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          if(data.type === 'income') {
-            income += Number(data.price) || 0;
-          } else if (data.type === 'expense') {
-            expense += Number(data.price) || 0;
-          }
-        });
-
-        setTotalIncome(income);
-        setTotalExpense(expense);
-      } catch (err) {
-        Alert.alert('Error', 'Failed to fetch transactions');
-      }
+    const user = auth.currentUser;
+    if (!user) {
+      return;
+    }
+  
+    const q = query(
+      collection(firestore, 'transactions'),
+      where('userId', '==', user.uid)
+    );
+  
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+  
+      let income = 0;
+      let expense = 0;
+  
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+      
+        // Remove commas from the price string and convert to a number
+        const price = Number(data.price.replace(/,/g, '')) || 0;
+      
+        if (data.type === 'income') {
+          income += price;
+        } else if (data.type === 'expense') {
+          expense += price;
+        }
+      });
+  
+      setTotalIncome(income);
+      setTotalExpense(expense);
+    });
+  
+    return () => {
+      unsubscribe(); // Cleanup listener on unmount
     };
-
-    fetchTotals();
   }, []);
 
   return (
@@ -70,7 +85,8 @@ const HomeScreen = () => {
               <Icon name="pin-invoke" size={22} color="black" style={styles.icon} />
               <Text style={styles.summaryLabel}>Total Income</Text>
             </View>
-            <Text style={styles.incomeValue}>${totalIncome}</Text>
+            <Text style={styles.incomeValue}>+{new Intl.NumberFormat('en-US').format(totalIncome)}</Text>
+            <Text style={styles.summaryCurrency}>VND</Text>
           </View>
           <View style={styles.verticalDivider} />
           <View style={styles.summaryBox}>
@@ -78,19 +94,66 @@ const HomeScreen = () => {
               <Icon name="pin-end" size={22} color="black" style={styles.icon} />
               <Text style={styles.summaryLabel}>Total Expense</Text>
             </View>
-            <Text style={styles.expenseValue}>${totalExpense}</Text>
+            <Text style={styles.expenseValue}>-{new Intl.NumberFormat('en-US').format(totalExpense)}</Text>
+            <Text style={styles.summaryCurrency}>VND</Text>
           </View>
         </View>
       </View>
       <View style={styles.subContainer}>
-        <Text style={styles.title}>Welcome to FinWise!</Text>
-        <Text style={styles.subtitle}>Track your expenses and manage your finances</Text>
+        <View style={styles.dateBox}>
+          <TouchableOpacity
+            style={[
+              styles.summaryBox,
+              selectedPeriod === 'daily' ? styles.activeBox : styles.inactiveBox,
+            ]}
+            onPress={() => handlePeriodPress('daily')}
+          >
+            <Text
+              style={[
+                styles.summaryLabel,
+                selectedPeriod === 'daily' ? styles.activeLabel : styles.inactiveLabel,
+              ]}
+            >
+              Daily
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.summaryBox,
+              selectedPeriod === 'weekly' ? styles.activeBox : styles.inactiveBox,
+            ]}
+            onPress={() => handlePeriodPress('weekly')}
+          >
+            <Text
+              style={[
+                styles.summaryLabel,
+                selectedPeriod === 'weekly' ? styles.activeLabel : styles.inactiveLabel,
+              ]}
+            >
+              Weekly
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.summaryBox,
+              selectedPeriod === 'monthly' ? styles.activeBox : styles.inactiveBox,
+            ]}
+            onPress={() => handlePeriodPress('monthly')}
+          >
+            <Text
+              style={[
+                styles.summaryLabel,
+                selectedPeriod === 'monthly' ? styles.activeLabel : styles.inactiveLabel,
+              ]}
+            >
+              Monthly
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </LinearGradient>
   )
 }
-
-export default HomeScreen
 
 const styles = StyleSheet.create({
   container: {
@@ -109,7 +172,7 @@ const styles = StyleSheet.create({
   summaryBox: {
     flex: 1,
     borderRadius: 16,
-    padding: 20,
+    padding: 10,
     marginHorizontal: 8,
     alignItems: 'center',
   },
@@ -161,5 +224,30 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     paddingHorizontal: 40,
+  },
+  summaryCurrency: {
+    fontWeight: 700,
+  },
+  dateBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#DFF7E2',
+    borderRadius: 20,
+    alignItems: 'center',
+    height: 70
+  },
+  activeBox: {
+    backgroundColor: '#00D09E', // Active background color
+    borderWidth: 2,
+    borderColor: '#007B55', // Border for active state
+  },
+  inactiveBox: {
+    backgroundColor: '#DFF7E2', // Inactive background color
+  },
+  activeLabel: {
+    color: '#FFFFFF', // Active text color
+  },
+  inactiveLabel: {
+    color: '#000000', // Inactive text color
   },
 });
