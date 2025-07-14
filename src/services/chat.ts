@@ -12,8 +12,6 @@ export type ChatMessage = {
   sender: 'user' | 'bot';
 };
 
-const GEMINI_API_KEY = 'AIzaSyBfAVc6x3fV_iA3VwC8YR8kwy95FvOH1Wo';
-
 // Send a chat message (from user or bot)
 export async function sendMessage(userId: string, text: string, sender: 'user' | 'bot' = 'user') {
   if (!auth.currentUser) throw new Error('User not authenticated');
