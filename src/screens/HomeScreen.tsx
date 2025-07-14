@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Alert, TouchableOpacity } from 'react-native'
+import { StyleSheet, Text, View, Alert, TouchableOpacity, ScrollView, FlatList } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import Header from '../components/Header'
 import { auth, firestore } from '../services/firebase';
@@ -6,19 +6,111 @@ import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestor
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { formatCurrencyShort } from '../utils/currencyFormatter';
 
 export default function Home () {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [selectedPeriod, setSelectedPeriod] = useState('daily');
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const navigation = useNavigation();
 
   const handlePeriodPress = (period: string) => {
     setSelectedPeriod(period);
     console.log(`Selected period: ${period}`);
-    // Add logic to filter transactions based on the selected period
+    filterTransactionsByPeriod(period, transactions);
+  };
+
+  // Filter transactions based on selected period
+  const filterTransactionsByPeriod = (period: string, allTransactions: any[]) => {
+    const now = new Date();
+    let filtered = [];
+
+    switch (period) {
+      case 'daily':
+        filtered = allTransactions.filter(transaction => {
+          const transactionDate = transaction.date.toDate();
+          return (
+            transactionDate.getDate() === now.getDate() &&
+            transactionDate.getMonth() === now.getMonth() &&
+            transactionDate.getFullYear() === now.getFullYear()
+          );
+        });
+        break;
+
+      case 'weekly':
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        filtered = allTransactions.filter(transaction => {
+          const transactionDate = transaction.date.toDate();
+          return transactionDate >= startOfWeek && transactionDate <= endOfWeek;
+        });
+        break;
+
+      case 'monthly':
+        filtered = allTransactions.filter(transaction => {
+          const transactionDate = transaction.date.toDate();
+          return (
+            transactionDate.getMonth() === now.getMonth() &&
+            transactionDate.getFullYear() === now.getFullYear()
+          );
+        });
+        break;
+
+      default:
+        filtered = allTransactions;
+    }
+
+    setFilteredTransactions(filtered);
+  };
+
+  // Render individual transaction item
+  const renderTransactionItem = ({ item }: { item: any }) => {
+    const price = typeof item.price === 'string'
+      ? Number(item.price.replace(/,/g, ''))
+      : Number(item.price) || 0;
+
+    const isIncome = item.type === 'income';
+    const transactionDate = item.date.toDate();
+
+    return (
+      <View style={styles.transactionItem}>
+        <View style={styles.transactionLeft}>
+          <View style={[styles.transactionIcon, { backgroundColor: isIncome ? '#E8F5E8' : '#FFE8E8' }]}>
+            <Icon 
+              name={isIncome ? 'trending-up' : 'trending-down'} 
+              size={20} 
+              color={isIncome ? '#00B88D' : '#FF5A5F'} 
+            />
+          </View>
+          <View style={styles.transactionDetails}>
+            <Text style={styles.transactionTitle}>{item.title}</Text>
+            <Text style={styles.transactionCategory}>{item.category}</Text>
+            <Text style={styles.transactionDate}>
+              {transactionDate.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.transactionRight}>
+          <Text style={[styles.transactionAmount, { color: isIncome ? '#00B88D' : '#FF5A5F' }]}>
+            {isIncome ? '+' : '-'}{formatCurrencyShort(price)}
+          </Text>
+          <Text style={styles.transactionCurrency}>VND</Text>
+        </View>
+      </View>
+    );
   };
 
   const handleNotificationPress = () => {
@@ -41,15 +133,22 @@ export default function Home () {
     );
   
     const unsubscribe = onSnapshot(q, (snapshot) => {
-  
+      const transactionList: any[] = [];
       let income = 0;
       let expense = 0;
   
       snapshot.forEach((doc) => {
         const data = doc.data();
+        const transactionData = {
+          id: doc.id,
+          ...data,
+        };
+        transactionList.push(transactionData);
       
         // Remove commas from the price string and convert to a number
-        const price = Number(data.price.replace(/,/g, '')) || 0;
+        const price = typeof data.price === 'string'
+        ? Number(data.price.replace(/,/g, ''))
+        : Number(data.price) || 0;
       
         if (data.type === 'income') {
           income += price;
@@ -58,8 +157,12 @@ export default function Home () {
         }
       });
   
+      setTransactions(transactionList);
       setTotalIncome(income);
       setTotalExpense(expense);
+      
+      // Filter transactions for the current selected period
+      filterTransactionsByPeriod(selectedPeriod, transactionList);
     });
   
     return () => {
@@ -85,7 +188,7 @@ export default function Home () {
               <Icon name="pin-invoke" size={22} color="black" style={styles.icon} />
               <Text style={styles.summaryLabel}>Total Income</Text>
             </View>
-            <Text style={styles.incomeValue}>+{new Intl.NumberFormat('en-US').format(totalIncome)}</Text>
+            <Text style={styles.incomeValue}>+{formatCurrencyShort(totalIncome)}</Text>
             <Text style={styles.summaryCurrency}>VND</Text>
           </View>
           <View style={styles.verticalDivider} />
@@ -94,7 +197,7 @@ export default function Home () {
               <Icon name="pin-end" size={22} color="black" style={styles.icon} />
               <Text style={styles.summaryLabel}>Total Expense</Text>
             </View>
-            <Text style={styles.expenseValue}>-{new Intl.NumberFormat('en-US').format(totalExpense)}</Text>
+            <Text style={styles.expenseValue}>-{formatCurrencyShort(totalExpense)}</Text>
             <Text style={styles.summaryCurrency}>VND</Text>
           </View>
         </View>
@@ -149,6 +252,30 @@ export default function Home () {
               Monthly
             </Text>
           </TouchableOpacity>
+        </View>
+        
+        {/* Transactions List */}
+        <View style={styles.transactionsContainer}>
+          <Text style={styles.transactionsTitle}>
+            {selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)} Transactions
+          </Text>
+          {filteredTransactions.length > 0 ? (
+            <FlatList
+              data={filteredTransactions}
+              renderItem={renderTransactionItem}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              style={styles.transactionsList}
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <Icon name="receipt-long" size={48} color="#999" />
+              <Text style={styles.emptyStateText}>No transactions found</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Add some transactions to see them here
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </LinearGradient>
@@ -249,5 +376,98 @@ const styles = StyleSheet.create({
   },
   inactiveLabel: {
     color: '#000000', // Inactive text color
+  },
+  // Transaction styles
+  transactionsContainer: {
+    flex: 1,
+    paddingTop: 20,
+  },
+  transactionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  transactionsList: {
+    flex: 1,
+  },
+  transactionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  transactionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  transactionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  transactionDetails: {
+    flex: 1,
+  },
+  transactionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  transactionCategory: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  transactionDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  transactionRight: {
+    alignItems: 'flex-end',
+  },
+  transactionAmount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  transactionCurrency: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#999',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
 });
