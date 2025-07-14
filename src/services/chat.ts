@@ -12,7 +12,7 @@ export type ChatMessage = {
   sender: 'user' | 'bot';
 };
 
-const GEMINI_API_KEY = 'AIzaSyBfAVc6x3fV_iA3VwC8YR8kwy95FvOH1Wo';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // Send a chat message (from user or bot)
 export async function sendMessage(userId: string, text: string, sender: 'user' | 'bot' = 'user') {
