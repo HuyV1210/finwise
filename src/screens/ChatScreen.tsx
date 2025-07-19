@@ -20,39 +20,44 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
+  // Fetch messages from Firestore
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
 
+    setInitialLoading(true);
     const unsubscribe = listenForMessages(user.uid, (chatMessages: ChatMessage[]) => {
-      const messages: Message[] = chatMessages.map(msg => ({
+      let messages: Message[] = chatMessages.map(msg => ({
         id: msg.id || '',
         text: msg.text,
         sender: msg.sender,
         timestamp: msg.createdAt,
       }));
+      // If no messages, show welcome
+      if (messages.length === 0) {
+        messages = [
+          {
+            id: 'welcome',
+            text: "Hello! I'm your personal finance assistant. I can help you track expenses, analyze spending patterns, and provide financial advice. How can I help you today?",
+            sender: 'bot',
+            timestamp: new Date(),
+          },
+        ];
+      }
       setMessages(messages);
+      setInitialLoading(false);
+      setRefreshing(false);
     });
-
-    // Add welcome message
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: 'welcome',
-          text: "Hello! I'm your personal finance assistant. I can help you track expenses, analyze spending patterns, and provide financial advice. How can I help you today?",
-          sender: 'bot',
-          timestamp: new Date(),
-        },
-      ]);
-    }
-
     return unsubscribe;
   }, []);
 
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
-    // Scroll to bottom when new messages arrive
     if (messages.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
@@ -60,27 +65,35 @@ export default function Chat() {
     }
   }, [messages]);
 
+  // Show scroll-to-bottom button if user scrolls up
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isAtBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
+    setShowScrollToBottom(!isAtBottom);
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    // The listener will update messages and set refreshing to false
+  };
+
+  const handleScrollToBottom = () => {
+    flatListRef.current?.scrollToEnd({ animated: true });
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
-
     const user = auth.currentUser;
     if (!user) {
       Alert.alert('Error', 'Please log in to send messages');
       return;
     }
-
     const userMessage = inputText.trim();
     setInputText('');
     setIsLoading(true);
-
     try {
-      // Send user message
       await sendMessage(user.uid, userMessage, 'user');
-
-      // Get bot response
       const botResponse = await getBotResponse(userMessage);
-      
-      // Send bot response
       await sendMessage(user.uid, botResponse, 'bot');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -92,7 +105,6 @@ export default function Chat() {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.sender === 'user';
-    
     return (
       <View style={[
         styles.messageContainer,
@@ -102,20 +114,21 @@ export default function Chat() {
           styles.messageBubble,
           isUser ? styles.userMessageBubble : styles.botMessageBubble
         ]}>
-          <Text style={[
-            styles.messageText,
-            isUser ? styles.userMessageText : styles.botMessageText
-          ]}>
+          <Text
+            style={[
+              styles.messageText,
+              isUser ? styles.userMessageText : styles.botMessageText
+            ]}
+            accessibilityLabel={isUser ? 'Your message' : 'Bot message'}
+            testID={isUser ? 'user-message' : 'bot-message'}
+          >
             {item.text}
           </Text>
           <Text style={[
             styles.messageTime,
             isUser ? styles.userMessageTime : styles.botMessageTime
           ]}>
-            {item.timestamp.toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })}
+            {item.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
       </View>
@@ -138,20 +151,45 @@ export default function Chat() {
           <Text style={styles.headerTitle}>FinWise Assistant</Text>
           <Text style={styles.headerSubtitle}>Your AI financial advisor</Text>
         </View>
-
         {/* Messages */}
         <View style={styles.messagesContainer}>
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.messagesList}
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          />
+          {initialLoading ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#00B88D" />
+              <Text style={{ color: '#00B88D', marginTop: 12 }}>Loading chat...</Text>
+            </View>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.messagesList}
+              showsVerticalScrollIndicator={false}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              ListEmptyComponent={
+                <View style={{ alignItems: 'center', marginTop: 40 }}>
+                  <Icon name="chat-bubble-outline" size={64} color="#DDD" />
+                  <Text style={{ color: '#999', fontSize: 16, marginTop: 12 }}>No messages yet. Start the conversation!</Text>
+                </View>
+              }
+            />
+          )}
+          {showScrollToBottom && (
+            <TouchableOpacity
+              style={styles.scrollToBottomButton}
+              onPress={handleScrollToBottom}
+              accessibilityLabel="Scroll to bottom"
+              testID="scroll-to-bottom"
+            >
+              <Icon name="arrow-downward" size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
-
         {/* Input */}
         <View style={styles.inputContainer}>
           <View style={styles.inputRow}>
@@ -164,11 +202,15 @@ export default function Chat() {
               multiline
               maxLength={1000}
               editable={!isLoading}
+              accessibilityLabel="Message input"
+              testID="chat-input"
             />
             <TouchableOpacity
               style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
               onPress={handleSendMessage}
               disabled={!inputText.trim() || isLoading}
+              accessibilityLabel="Send message"
+              testID="send-button"
             >
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -318,5 +360,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#CCC',
     shadowOpacity: 0,
     elevation: 0,
+  },
+  scrollToBottomButton: {
+    position: 'absolute',
+    right: 24,
+    bottom: 32,
+    backgroundColor: '#00B88D',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00B88D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 10,
   },
 });
