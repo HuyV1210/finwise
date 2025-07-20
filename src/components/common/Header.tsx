@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { auth, firestore } from '../services/firebase';
+import { auth, firestore } from '../../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 interface HeaderProps {

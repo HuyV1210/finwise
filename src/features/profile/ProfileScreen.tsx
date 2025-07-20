@@ -1,10 +1,26 @@
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator } from 'react-native'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { CommonActions, useNavigation } from '@react-navigation/native';
-import { auth, firestore } from '../services/firebase';
+import { auth, firestore } from '../../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+
+const MenuItem = ({ icon, title, subtitle, onPress }: { icon: string; title: string; subtitle: string; onPress: () => void }) => (
+  <TouchableOpacity
+    style={styles.menuItem}
+    onPress={onPress}
+  >
+    <View style={styles.menuIconContainer}>
+      <Icon name={icon} size={24} color="#00B88D" />
+    </View>
+    <View style={styles.menuContent}>
+      <Text style={styles.menuTitle}>{title}</Text>
+      <Text style={styles.menuSubtitle}>{subtitle}</Text>
+    </View>
+    <Icon name="chevron-right" size={20} color="#999" />
+  </TouchableOpacity>
+);
 
 export default function Profile () {
     const navigation = useNavigation();
@@ -41,9 +57,11 @@ export default function Profile () {
             });
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
+        let msg = 'Failed to load user information';
+        if (error instanceof Error) msg = error.message;
         console.error('Error fetching user info:', error);
-        Alert.alert('Error', 'Failed to load user information');
+        Alert.alert('Error', msg);
       } finally {
         setLoading(false);
       }
@@ -67,8 +85,10 @@ export default function Profile () {
                     routes: [{ name: 'Splash' }],
                   })
                 );
-              } catch (error) {
-                Alert.alert('Error', 'Failed to logout');
+              } catch (error: unknown) {
+                let msg = 'Failed to logout';
+                if (error instanceof Error) msg = error.message;
+                Alert.alert('Error', msg);
               }
             },
           },
@@ -76,7 +96,7 @@ export default function Profile () {
       );
     };
 
-    const menuItems = [
+    const menuItems = useMemo(() => [
       {
         icon: 'person-outline',
         title: 'Edit Profile',
@@ -107,7 +127,7 @@ export default function Profile () {
         subtitle: 'App version and information',
         onPress: () => Alert.alert('FinWise', 'Version 1.0.0\nYour personal finance assistant'),
       },
-    ];
+    ], []);
 
     if (loading) {
       return (
@@ -150,23 +170,9 @@ export default function Profile () {
             {/* Menu Items */}
             <View style={styles.menuContainer}>
               {menuItems.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.menuItem,
-                    index === menuItems.length - 1 && styles.lastMenuItem
-                  ]}
-                  onPress={item.onPress}
-                >
-                  <View style={styles.menuIconContainer}>
-                    <Icon name={item.icon} size={24} color="#00B88D" />
-                  </View>
-                  <View style={styles.menuContent}>
-                    <Text style={styles.menuTitle}>{item.title}</Text>
-                    <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-                  </View>
-                  <Icon name="chevron-right" size={20} color="#999" />
-                </TouchableOpacity>
+                <View key={index} style={index === menuItems.length - 1 ? styles.lastMenuItem : undefined}>
+                  <MenuItem {...item} />
+                </View>
               ))}
             </View>
 

@@ -9,10 +9,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useColorScheme } from 'react-native';
 import SplashScreen from './src/screens/SplashScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import WelcomeScreen from './src/screens/WelcomeScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import RegisterScreen from './src/screens/RegisterScreen';
-import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import WelcomeScreen from './src/features/welcome/WelcomeScreen';
+import LoginScreen from './src/features/auth/LoginScreen';
+import RegisterScreen from './src/features/auth/RegisterScreen';
+import ForgotPasswordScreen from './src/features/auth/ForgotPasswordScreen';
 import MainTabs from './src/navigation/MainTabs';
 
 const Stack = createNativeStackNavigator();

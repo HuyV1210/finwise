@@ -13,7 +13,7 @@ import React, { useState } from 'react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import LinearGradient from 'react-native-linear-gradient';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, firestore } from '../services/firebase';
+import { auth, firestore } from '../../services/firebase';
 import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 
 type RootStackParamList = {

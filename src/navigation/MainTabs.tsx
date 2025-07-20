@@ -4,9 +4,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import HomeScreen from '../screens/HomeScreen';
 import AddScreen from '../screens/AddScreen';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import ProfileScreen from '../screens/ProfileScreen';
-import StatsScreen from '../screens/StatsScreen';
-import ChatScreen from '../screens/ChatScreen';
+import ProfileScreen from '../features/profile/ProfileScreen';
+import StatsScreen from '../features/stats/StatsScreen';
+import ChatScreen from '../features/chat/ChatScreen';
 
 const Tab = createBottomTabNavigator();
 

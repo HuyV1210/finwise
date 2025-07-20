@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, Alert, TouchableOpacity, ScrollView, FlatList } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import Header from '../components/Header'
+import Header from '../components/common/Header'
 import { auth, firestore } from '../services/firebase';
 import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';

@@ -6,7 +6,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, firestore } from '../services/firebase';
-import CategoryPickerModal from '../components/CategoryPickerModal';
+import CategoryPickerModal from '../components/common/CategoryPickerModal';
 
 const categories = [
   { label: 'Food & Dining', value: 'Food & Dining', icon: 'restaurant' },

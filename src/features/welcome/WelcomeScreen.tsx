@@ -29,7 +29,7 @@ export default function Welcome({ navigation }: WelcomeScreenProps) {
       <ScrollView style={styles.subContainer} contentContainerStyle={styles.imageContainer}>
         <View style={styles.circleImageWrapper}>
           <View style={styles.circle} />
-          <Image source={require('../assets/welcome/welcome.png')} style={styles.image} />
+          <Image source={require('../../assets/welcome/welcome.png')} style={styles.image} />
         </View>
         <View style={styles.buttonContainer}>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>

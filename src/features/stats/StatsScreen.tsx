@@ -1,11 +1,11 @@
 import { StyleSheet, Text, View, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useNavigation } from '@react-navigation/native';
-import { auth, firestore } from '../services/firebase';
+import { auth, firestore } from '../../services/firebase';
 import { collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { formatCurrency, formatCurrencyShort } from '../utils/currencyFormatter';
+import { formatCurrency, formatCurrencyShort } from '../../utils/currencyFormatter';
 
 const { width } = Dimensions.get('window');
 
@@ -182,7 +182,10 @@ export default function Stats() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Statistics</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={styles.headerTitle}>Statistics</Text>
+            <Icon name="pie-chart" size={32} color="#fff" style={{ marginLeft: 12 }} />
+          </View>
           <Text style={styles.headerSubtitle}>Track your financial patterns</Text>
         </View>
 

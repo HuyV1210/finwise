@@ -12,48 +12,36 @@ import {
 import React, { useState } from 'react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import LinearGradient from 'react-native-linear-gradient';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../services/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RootStackParamList = {
+  Forgot: undefined;
   Login: undefined;
   Register: undefined;
-  Forgot: undefined;
-  Home: undefined;
 };
 
-type LoginScreenProps = {
-  navigation: StackNavigationProp<RootStackParamList, 'Login'>;
+type ForgotScreenProps = {
+  navigation: StackNavigationProp<RootStackParamList, 'Forgot'>;
 };
 
-export default function Login({ navigation }: LoginScreenProps) {
+export default function Forgot({ navigation }: ForgotScreenProps) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
 
-  React.useEffect(() => {
-    (async () => {
-      const savedEmail = await AsyncStorage.getItem('rememberedEmail');
-      if(savedEmail) {
-        setEmail(savedEmail);
-        setRememberMe(true);
+  const handleReset = async () => {
+      if(!email) {
+          return Alert.alert('Please enter your email address.');
       }
-    })();
-  }, []);
 
-  const handleLogin = async () => {
-    try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-      if(rememberMe) {
-        await AsyncStorage.setItem('rememberedEmail', email.trim());
-      } else {
-        await AsyncStorage.removeItem('rememberedEmail');
+      try {
+          await sendPasswordResetEmail(auth, email);
+          Alert.alert('Password reset email sent. Please check your inbox!');
+          navigation.replace('Login');
+      } catch(error: any) {
+          let msg = error.message;
+          Alert.alert('Error:', msg);
       }
-      navigation.replace('Home');
-    } catch (err: any) {
-      Alert.alert('Login Failed', err.message);
-    }
   };
 
   return (
@@ -63,7 +51,7 @@ export default function Login({ navigation }: LoginScreenProps) {
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
-      <Text style={styles.welcomeText}>Login</Text>
+      <Text style={styles.welcomeText}>Forgot Password</Text>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1, width: '100%' }}
@@ -73,7 +61,7 @@ export default function Login({ navigation }: LoginScreenProps) {
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Enter Email Address</Text>
           <TextInput
             style={styles.input}
             placeholder="you@example.com"
@@ -83,35 +71,8 @@ export default function Login({ navigation }: LoginScreenProps) {
             autoCapitalize="none"
           />
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="********"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-
-          <View style={styles.rememberMeRow}>
-            <TouchableOpacity
-              style={styles.checkbox}
-              onPress={() => setRememberMe(!rememberMe)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: rememberMe }}
-            >
-              <View style={[styles.checkboxBox, rememberMe && styles.checkboxBoxChecked]}>
-                {rememberMe && <Text style={styles.checkboxTick}>✓</Text>}
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.rememberMeText}>Remember Me</Text>
-          </View>
-
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginText}>Login</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Forgot')}>
-            <Text style={styles.linkText}>Forgot Password?</Text>
+          <TouchableOpacity onPress={handleReset}>
+            <Text style={styles.linkText}>Send Reset Password</Text>
           </TouchableOpacity>
 
           <View style={styles.registerRow}>
@@ -168,6 +129,7 @@ const styles = StyleSheet.create({
     borderColor: '#B6E2C8',
     fontSize: 16,
     color: '#222',
+    marginBottom: 20
   },
   loginButton: {
     marginTop: 32,
@@ -195,38 +157,6 @@ const styles = StyleSheet.create({
   },
   smallText: {
     fontSize: 14,
-    color: '#222',
-  },
-  rememberMeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  checkbox: {
-    marginRight: 8,
-  },
-  checkboxBox: {
-    width: 22,
-    height: 22,
-    borderWidth: 2,
-    borderColor: '#00B88D',
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  checkboxBoxChecked: {
-    backgroundColor: '#00B88D',
-    borderColor: '#00B88D',
-  },
-  checkboxTick: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  rememberMeText: {
-    fontSize: 16,
     color: '#222',
   },
 });
