@@ -5,6 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { addDoc, collection } from 'firebase/firestore';
+import { sendNotification } from '../services/notificationService';
 import { auth, firestore } from '../services/firebase';
 import CategoryPickerModal from '../components/common/CategoryPickerModal';
 
@@ -43,7 +44,7 @@ export default function AddScreen () {
       setFormData({
         price: '',
         category: '',
-        type: 'expense',
+        type: 'income',
         date: new Date(),
         title: '',
         note: '',
@@ -142,6 +143,11 @@ export default function AddScreen () {
         userId: auth.currentUser.uid,
         createdAt: new Date(),
       });
+
+      // Trigger notification
+      const notiTitle = formData.type === 'income' ? 'Income Added' : 'Expense Added';
+      const notiMessage = `${formData.title.trim()} (${formData.category}) for ${formData.price} VND`;
+      await sendNotification(auth.currentUser.uid, notiTitle, notiMessage);
 
       Alert.alert('Success', 'Transaction added successfully!', [
         {

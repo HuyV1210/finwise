@@ -14,6 +14,8 @@ import LoginScreen from './src/features/auth/LoginScreen';
 import RegisterScreen from './src/features/auth/RegisterScreen';
 import ForgotPasswordScreen from './src/features/auth/ForgotPasswordScreen';
 import MainTabs from './src/navigation/MainTabs';
+import SearchScreen from './src/screens/SearchScreen';
+import NotificationScreen from './src/screens/NotificationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,6 +31,8 @@ export default function App() {
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Home" component={MainTabs} />
         <Stack.Screen name="Forgot" component={ForgotPasswordScreen} />
+        <Stack.Screen name="Search" component={SearchScreen}/>
+        <Stack.Screen name="Notification" component={NotificationScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -3,17 +3,21 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { auth, firestore } from '../../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
 
 interface HeaderProps {
   onNotificationPress?: () => void;
+  onSearch?: (query: string) => void;
   onSearchPress?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
-  onNotificationPress = () => {}, 
-  onSearchPress = () => {} 
+  onNotificationPress,
+  onSearch = () => {},
+  onSearchPress
 }) => {
   const [userName, setUserName] = useState<string>('User');
+  const navigation = useNavigation<any>();
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -39,13 +43,17 @@ const Header: React.FC<HeaderProps> = ({
     fetchUserName();
   }, []);
 
+
+  const handleNotification = () => {
+    navigation.navigate('Notification');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.leftSection}>
         <Text style={styles.greeting}>Hello,</Text>
         <Text style={styles.userName}>{userName}</Text>
       </View>
-      
       <View style={styles.rightSection}>
         <TouchableOpacity 
           style={styles.iconButton} 
@@ -54,10 +62,9 @@ const Header: React.FC<HeaderProps> = ({
         >
           <Icon name="search" size={24} color="#333" />
         </TouchableOpacity>
-        
         <TouchableOpacity 
           style={styles.iconButton} 
-          onPress={onNotificationPress}
+          onPress={handleNotification}
           accessibilityLabel="Notifications"
         >
           <Icon name="notifications" size={24} color="#333" />

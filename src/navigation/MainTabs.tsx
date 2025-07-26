@@ -83,6 +83,9 @@ export default function MainTabs() {
         component={StatsScreen}
         options={{ tabBarLabel: 'Statistics' }}
       />
+      {/* If using a stack navigator, add NotificationScreen to the stack */}
+      {/* Example: */}
+      {/* <Stack.Screen name="Notification" component={NotificationScreen} /> */}
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
